@@ -1,0 +1,11 @@
+{
+  "name": "MediGuide AI",
+  "description": "Multilingual AI-powered medicine intelligence platform with RAG, OCR package scanning, interaction checking, safety guard, and hybrid Gemini + Ollama orchestration.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -1,0 +1,357 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Pillar 1: Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Phase 3: Hardened Global Primitives
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isVerifiedUser() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isVerifiedUser() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == 'kaithakrishnareddy@gmail.com' ||
+        request.auth.token.email == 'ramcharanreddykaitha@gmail.com'
+      );
+    }
+
+    function hasValidParentWorkspace(userId) {
+      return exists(/databases/$(database)/documents/workspaces/$(userId)) &&
+        get(/databases/$(database)/documents/workspaces/$(userId)).data.ownerId == request.auth.uid;
+    }
+
+    // Entity Validation Blueprints (Pillar 2 & Pillar 5)
+    function isValidUserWorkspace(data) {
+      return data.keys().hasAll([
+          'ownerId',
+          'displayName',
+          'preferredLanguage',
+          'favouriteMedicineIds',
+          'scanCount',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'ownerId',
+          'displayName',
+          'preferredLanguage',
+          'favouriteMedicineIds',
+          'scanCount',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.ownerId == request.auth.uid &&
+        data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 &&
+        data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120 &&
+        data.preferredLanguage is string && data.preferredLanguage in ['en', 'te', 'hi', 'ta'] &&
+        data.favouriteMedicineIds is list && data.favouriteMedicineIds.size() <= 50 &&
+        (data.favouriteMedicineIds.size() == 0 || (data.favouriteMedicineIds[0] is string && data.favouriteMedicineIds[0].size() <= 64)) &&
+        data.scanCount is int && data.scanCount >= 0 && data.scanCount <= 1000000 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidUserPrivateInfo(data) {
+      return data.keys().hasAll(['ownerId', 'email', 'phone', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['ownerId', 'email', 'phone', 'createdAt', 'updatedAt']) &&
+        data.ownerId == request.auth.uid &&
+        data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 254 &&
+        data.phone is string && data.phone.size() >= 0 && data.phone.size() <= 32 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidSavedMedicine(data) {
+      return data.keys().hasAll([
+          'ownerId',
+          'medicineId',
+          'brandName',
+          'genericName',
+          'dosageForm',
+          'scheduleNote',
+          'usageType',
+          'active',
+          'dosesTakenToday',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'ownerId',
+          'medicineId',
+          'brandName',
+          'genericName',
+          'dosageForm',
+          'scheduleNote',
+          'usageType',
+          'active',
+          'dosesTakenToday',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.ownerId == request.auth.uid &&
+        data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 &&
+        data.medicineId is string && data.medicineId.size() >= 1 && data.medicineId.size() <= 64 &&
+        data.brandName is string && data.brandName.size() >= 1 && data.brandName.size() <= 160 &&
+        data.genericName is string && data.genericName.size() >= 1 && data.genericName.size() <= 240 &&
+        data.dosageForm is string && data.dosageForm.size() >= 1 && data.dosageForm.size() <= 40 &&
+        data.scheduleNote is string && data.scheduleNote.size() >= 1 && data.scheduleNote.size() <= 160 &&
+        data.usageType is string && data.usageType in ['TAKING', 'REFERENCE_ONLY'] &&
+        data.active is bool &&
+        data.dosesTakenToday is int && data.dosesTakenToday >= 0 && data.dosesTakenToday <= 100 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidMedicationReminder(data) {
+      return data.keys().hasAll([
+          'ownerId',
+          'medicineId',
+          'medicineName',
+          'scheduleLabel',
+          'time',
+          'active',
+          'lastStatus',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'ownerId',
+          'medicineId',
+          'medicineName',
+          'scheduleLabel',
+          'time',
+          'active',
+          'lastStatus',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.ownerId == request.auth.uid &&
+        data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 &&
+        data.medicineId is string && data.medicineId.size() >= 1 && data.medicineId.size() <= 64 &&
+        data.medicineName is string && data.medicineName.size() >= 1 && data.medicineName.size() <= 160 &&
+        data.scheduleLabel is string && data.scheduleLabel.size() >= 1 && data.scheduleLabel.size() <= 120 &&
+        data.time is string && data.time.size() >= 1 && data.time.size() <= 32 &&
+        data.active is bool &&
+        data.lastStatus is string && data.lastStatus in ['PENDING', 'TAKEN', 'SKIPPED'] &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidUserFeedback(data) {
+      return data.keys().hasAll([
+          'ownerId',
+          'category',
+          'message',
+          'status',
+          'severity',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'ownerId',
+          'category',
+          'message',
+          'status',
+          'severity',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 &&
+        data.category is string && data.category.size() >= 1 && data.category.size() <= 100 &&
+        data.message is string && data.message.size() >= 1 && data.message.size() <= 1500 &&
+        data.status is string && data.status in ['Under review', 'Resolved'] &&
+        data.severity is string && data.severity in ['Low', 'Medium', 'High'] &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    // Admins Registry Collection (Read-only for verification)
+    match /admins/{adminId} {
+      allow get: if isOwner(adminId) || isAdmin();
+      allow list, create, update, delete: if false;
+    }
+
+    // Root User Workspace Collection
+    match /workspaces/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId) && existing().ownerId == request.auth.uid;
+      allow list: if false;
+      allow create: if isOwner(userId) &&
+        isValidId(userId) &&
+        isValidUserWorkspace(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isOwner(userId) &&
+        isValidId(userId) &&
+        isValidUserWorkspace(incoming()) &&
+        incoming().ownerId == existing().ownerId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'preferredLanguage', 'updatedAt']) ||
+          incoming().diff(existing()).affectedKeys().hasOnly(['favouriteMedicineIds', 'updatedAt']) ||
+          incoming().diff(existing()).affectedKeys().hasOnly(['scanCount', 'updatedAt']) ||
+          incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'preferredLanguage', 'favouriteMedicineIds', 'scanCount', 'updatedAt'])
+        );
+      allow delete: if false;
+
+      // Isolated PII Subcollection
+      match /private/{docId} {
+        allow get: if isOwner(userId) &&
+          isValidId(userId) &&
+          isValidId(docId) &&
+          existing().ownerId == request.auth.uid &&
+          hasValidParentWorkspace(userId);
+        allow list: if false;
+        allow create: if isOwner(userId) &&
+          isValidId(userId) &&
+          isValidId(docId) &&
+          isValidUserPrivateInfo(incoming()) &&
+          incoming().createdAt == request.time &&
+          incoming().updatedAt == request.time &&
+          hasValidParentWorkspace(userId);
+        allow update: if isOwner(userId) &&
+          isValidId(userId) &&
+          isValidId(docId) &&
+          isValidUserPrivateInfo(incoming()) &&
+          incoming().ownerId == existing().ownerId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['phone', 'updatedAt']) &&
+          hasValidParentWorkspace(userId);
+        allow delete: if false;
+      }
+
+      // Personal Saved Medicines Subcollection
+      match /medicines/{itemId} {
+        allow get: if isOwner(userId) &&
+          isValidId(userId) &&
+          isValidId(itemId) &&
+          existing().ownerId == request.auth.uid &&
+          hasValidParentWorkspace(userId);
+        allow list: if isOwner(userId) && existing().ownerId == request.auth.uid;
+        allow create: if isOwner(userId) &&
+          isValidId(userId) &&
+          isValidId(itemId) &&
+          isValidSavedMedicine(incoming()) &&
+          incoming().createdAt == request.time &&
+          incoming().updatedAt == request.time &&
+          hasValidParentWorkspace(userId);
+        allow update: if isOwner(userId) &&
+          isValidId(userId) &&
+          isValidId(itemId) &&
+          isValidSavedMedicine(incoming()) &&
+          incoming().ownerId == existing().ownerId &&
+          incoming().medicineId == existing().medicineId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time &&
+          (
+            incoming().diff(existing()).affectedKeys().hasOnly(['active', 'updatedAt']) ||
+            incoming().diff(existing()).affectedKeys().hasOnly(['dosesTakenToday', 'updatedAt']) ||
+            incoming().diff(existing()).affectedKeys().hasOnly(['scheduleNote', 'usageType', 'active', 'updatedAt'])
+          ) &&
+          hasValidParentWorkspace(userId);
+        allow delete: if isOwner(userId) &&
+          isValidId(userId) &&
+          isValidId(itemId) &&
+          existing().ownerId == request.auth.uid &&
+          hasValidParentWorkspace(userId);
+      }
+
+      // Scheduled Reminders Subcollection
+      match /reminders/{reminderId} {
+        allow get: if isOwner(userId) &&
+          isValidId(userId) &&
+          isValidId(reminderId) &&
+          existing().ownerId == request.auth.uid &&
+          hasValidParentWorkspace(userId);
+        allow list: if isOwner(userId) && existing().ownerId == request.auth.uid;
+        allow create: if isOwner(userId) &&
+          isValidId(userId) &&
+          isValidId(reminderId) &&
+          isValidMedicationReminder(incoming()) &&
+          incoming().createdAt == request.time &&
+          incoming().updatedAt == request.time &&
+          hasValidParentWorkspace(userId);
+        allow update: if isOwner(userId) &&
+          isValidId(userId) &&
+          isValidId(reminderId) &&
+          isValidMedicationReminder(incoming()) &&
+          incoming().ownerId == existing().ownerId &&
+          incoming().medicineId == existing().medicineId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time &&
+          (
+            incoming().diff(existing()).affectedKeys().hasOnly(['active', 'updatedAt']) ||
+            incoming().diff(existing()).affectedKeys().hasOnly(['lastStatus', 'updatedAt']) ||
+            incoming().diff(existing()).affectedKeys().hasOnly(['time', 'scheduleLabel', 'active', 'updatedAt'])
+          ) &&
+          hasValidParentWorkspace(userId);
+        allow delete: if isOwner(userId) &&
+          isValidId(userId) &&
+          isValidId(reminderId) &&
+          existing().ownerId == request.auth.uid &&
+          hasValidParentWorkspace(userId);
+      }
+    }
+
+    // User Feedback Collection (With Terminal State Locking on 'Resolved')
+    match /feedback/{feedbackId} {
+      allow get: if isVerifiedUser() &&
+        isValidId(feedbackId) &&
+        (existing().ownerId == request.auth.uid || isAdmin());
+      allow list: if isVerifiedUser() &&
+        (existing().ownerId == request.auth.uid || isAdmin());
+      allow create: if isVerifiedUser() &&
+        isValidId(feedbackId) &&
+        isValidUserFeedback(incoming()) &&
+        incoming().ownerId == request.auth.uid &&
+        incoming().status == 'Under review' &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser() &&
+        isValidId(feedbackId) &&
+        isValidUserFeedback(incoming()) &&
+        incoming().ownerId == existing().ownerId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          (
+            existing().status != 'Resolved' &&
+            existing().ownerId == request.auth.uid &&
+            incoming().status == existing().status &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['message', 'updatedAt'])
+          ) ||
+          (
+            isAdmin() &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+          )
+        );
+      allow delete: if false;
+    }
+  }
+}

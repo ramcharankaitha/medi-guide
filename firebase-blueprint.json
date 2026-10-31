@@ -1,0 +1,326 @@
+{
+  "entities": {
+    "UserWorkspace": {
+      "title": "UserWorkspace",
+      "description": "Stores a signed-in user's personal MediGuide AI workspace state (saved medicines, reminders, favourites, activity timeline, and language preferences) isolated per owner UID.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the workspace owner.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Display name of the authenticated user.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "preferredLanguage": {
+          "type": "string",
+          "description": "Preferred response language code.",
+          "enum": ["en", "te", "hi", "ta"],
+          "minLength": 2,
+          "maxLength": 5
+        },
+        "favouriteMedicineIds": {
+          "type": "array",
+          "description": "Bounded list of up to 50 saved favourite medicine IDs.",
+          "maxLength": 50
+        },
+        "scanCount": {
+          "type": "number",
+          "description": "Total verified medicine package scans performed by this user."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the workspace was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the workspace was last updated."
+        }
+      },
+      "required": [
+        "ownerId",
+        "displayName",
+        "preferredLanguage",
+        "favouriteMedicineIds",
+        "scanCount",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "UserPrivateInfo": {
+      "title": "UserPrivateInfo",
+      "description": "Strictly isolated PII document containing the user's email and phone number.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the owner.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Authenticated user email address.",
+          "minLength": 3,
+          "maxLength": 254
+        },
+        "phone": {
+          "type": "string",
+          "description": "User phone number for reminder alerts.",
+          "minLength": 0,
+          "maxLength": 32
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp."
+        }
+      },
+      "required": ["ownerId", "email", "phone", "createdAt", "updatedAt"]
+    },
+    "SavedMedicine": {
+      "title": "SavedMedicine",
+      "description": "A personal medicine item saved by a user under their workspace.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the owner.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "medicineId": {
+          "type": "string",
+          "description": "Verified medicine dataset record ID.",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "brandName": {
+          "type": "string",
+          "description": "Medicine brand name.",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "genericName": {
+          "type": "string",
+          "description": "Generic or salt composition name.",
+          "minLength": 1,
+          "maxLength": 240
+        },
+        "dosageForm": {
+          "type": "string",
+          "description": "Dosage form (Tablet, Capsule, Syrup, Injection, Suspension).",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "scheduleNote": {
+          "type": "string",
+          "description": "User dosing schedule or pack note.",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "usageType": {
+          "type": "string",
+          "enum": ["TAKING", "REFERENCE_ONLY"],
+          "minLength": 6,
+          "maxLength": 20
+        },
+        "active": {
+          "type": "boolean",
+          "description": "Whether the user is actively taking this medicine."
+        },
+        "dosesTakenToday": {
+          "type": "number",
+          "description": "Count of doses logged today."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp."
+        }
+      },
+      "required": [
+        "ownerId",
+        "medicineId",
+        "brandName",
+        "genericName",
+        "dosageForm",
+        "scheduleNote",
+        "usageType",
+        "active",
+        "dosesTakenToday",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "MedicationReminder": {
+      "title": "MedicationReminder",
+      "description": "A scheduled medication reminder belonging to a user workspace.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the owner.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "medicineId": {
+          "type": "string",
+          "description": "Dataset medicine ID.",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "medicineName": {
+          "type": "string",
+          "description": "Medicine label.",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "scheduleLabel": {
+          "type": "string",
+          "description": "Dosage frequency note.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "time": {
+          "type": "string",
+          "description": "Scheduled time string (e.g., 08:00 AM).",
+          "minLength": 1,
+          "maxLength": 32
+        },
+        "active": {
+          "type": "boolean",
+          "description": "Whether the reminder alarm is active."
+        },
+        "lastStatus": {
+          "type": "string",
+          "enum": ["PENDING", "TAKEN", "SKIPPED"],
+          "minLength": 5,
+          "maxLength": 16
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp."
+        }
+      },
+      "required": [
+        "ownerId",
+        "medicineId",
+        "medicineName",
+        "scheduleLabel",
+        "time",
+        "active",
+        "lastStatus",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "UserFeedback": {
+      "title": "UserFeedback",
+      "description": "User-submitted clinical or platform feedback.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the submitter.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "category": {
+          "type": "string",
+          "description": "Feedback category.",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "message": {
+          "type": "string",
+          "description": "Feedback details.",
+          "minLength": 1,
+          "maxLength": 1500
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Under review", "Resolved"],
+          "minLength": 8,
+          "maxLength": 20
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["Low", "Medium", "High"],
+          "minLength": 3,
+          "maxLength": 12
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp."
+        }
+      },
+      "required": [
+        "ownerId",
+        "category",
+        "message",
+        "status",
+        "severity",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/workspaces/{userId}": {
+      "schema": { "$ref": "#/entities/UserWorkspace" },
+      "description": "Root workspace document per authenticated user."
+    },
+    "/workspaces/{userId}/private/{docId}": {
+      "schema": { "$ref": "#/entities/UserPrivateInfo" },
+      "description": "Isolated PII subcollection for email and phone."
+    },
+    "/workspaces/{userId}/medicines/{itemId}": {
+      "schema": { "$ref": "#/entities/SavedMedicine" },
+      "description": "User's personal saved medicines subcollection."
+    },
+    "/workspaces/{userId}/reminders/{reminderId}": {
+      "schema": { "$ref": "#/entities/MedicationReminder" },
+      "description": "User's scheduled medication reminders subcollection."
+    },
+    "/feedback/{feedbackId}": {
+      "schema": { "$ref": "#/entities/UserFeedback" },
+      "description": "User-submitted feedback records."
+    }
+  }
+}
